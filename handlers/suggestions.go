@@ -20,29 +20,29 @@ func SuggestionsHandler(db *sql.DB) http.HandlerFunc {
 			return
 		}
 
-		// Use Trigram similarity to find matches across restaurants, cuisines, and areas
-		// We'll use a UNION for a unified list
+		// Use ILIKE for prefix/substring matching to avoid fuzzy trigram results
 		query := `
-			(SELECT 'restaurant' as type, restaurant_name as text, similarity(restaurant_name, $1) as score
+			(SELECT 'restaurant' as type, restaurant_name as text, 1.0 as score
 			 FROM restaurants
-			 WHERE restaurant_name % $1
+			 WHERE restaurant_name ILIKE $1
 			 LIMIT 5)
 			UNION ALL
-			(SELECT 'cuisine' as type, cuisine_name as text, similarity(cuisine_name, $1) as score
+			(SELECT 'cuisine' as type, cuisine_name as text, 1.0 as score
 			 FROM cuisines
-			 WHERE cuisine_name % $1
+			 WHERE cuisine_name ILIKE $1
 			 LIMIT 3)
 			UNION ALL
-			(SELECT 'area' as type, area as text, similarity(area, $1) as score
+			(SELECT 'area' as type, area as text, 1.0 as score
 			 FROM restaurants
-			 WHERE area % $1
+			 WHERE area ILIKE $1
 			 GROUP BY area
 			 LIMIT 3)
-			ORDER BY score DESC
+			ORDER BY score DESC, text ASC
 			LIMIT 10
 		`
 
-		rows, err := db.Query(query, q)
+		searchParams := "%" + q + "%"
+		rows, err := db.Query(query, searchParams)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return

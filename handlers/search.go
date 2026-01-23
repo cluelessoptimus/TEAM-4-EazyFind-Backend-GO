@@ -93,9 +93,9 @@ func SearchHandler(db *sql.DB) http.HandlerFunc {
 			}
 
 			if searchTerm != "" {
-				similarityExpr = fmt.Sprintf("similarity(r.restaurant_name, $%d)", idx)
-				conditions = append(conditions, fmt.Sprintf("(r.restaurant_name %% $%d OR r.area %% $%d)", idx, idx))
-				args = append(args, searchTerm)
+				similarityExpr = "1.0"
+				conditions = append(conditions, fmt.Sprintf("(r.restaurant_name ILIKE $%d OR r.area ILIKE $%d)", idx, idx))
+				args = append(args, "%"+searchTerm+"%")
 				idx++
 			}
 
