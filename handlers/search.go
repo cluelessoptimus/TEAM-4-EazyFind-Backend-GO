@@ -85,7 +85,7 @@ func ParseSearchParams(query url.Values) SearchParams {
 	p.MealTypes = query.Get("mealtypes")
 
 	latStr, lonStr := query.Get("lat"), query.Get("lon")
-	if p.City == "" && latStr != "" && lonStr != "" {
+	if latStr != "" && lonStr != "" {
 		p.Lat, _ = strconv.ParseFloat(latStr, 64)
 		p.Lon, _ = strconv.ParseFloat(lonStr, 64)
 		p.Radius, _ = strconv.ParseFloat(query.Get("radius"), 64)
