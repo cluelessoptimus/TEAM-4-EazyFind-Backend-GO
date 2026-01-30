@@ -305,6 +305,9 @@ func SearchHandler(db *sql.DB) http.HandlerFunc {
 	}
 }
 
+// GetRestaurantsByCityHandler provides a high-performance entry point for city-specific
+// restaurant discovery. It leverages case-insensitive matching and filters out
+// duplicate entries to ensure a clean result set for the initial landing views.
 func GetRestaurantsByCityHandler(db *sql.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		city := r.PathValue("city")
@@ -313,6 +316,10 @@ func GetRestaurantsByCityHandler(db *sql.DB) http.HandlerFunc {
 			return
 		}
 
+		// The query uses complex sub-query aggregation to fetch related metadata
+		// (cuisines, meal types) in a single database round-trip, significantly
+		// reducing network overhead. The ILIKE filter provides flexible city
+		// matching without the complexity of trigram indexes.
 		query := `
 			SELECT r.id, r.restaurant_name, r.city, r.area, r.cost_for_two, r.rating, r.latitude, r.longitude, r.image_url, r.effective_discount, r.free, r.offer, r.percentage,
 				COALESCE((SELECT json_agg(json_build_object('id', c.id, 'cuisine_name', c.cuisine_name)) FROM restaurant_cuisines rc JOIN cuisines c ON rc.cuisine_id = c.id WHERE rc.restaurant_id = r.id), '[]') as cuisines,
