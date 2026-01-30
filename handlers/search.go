@@ -114,6 +114,11 @@ func BuildSearchQueries(p SearchParams) (string, string, []interface{}) {
 		distanceExpr = fmt.Sprintf("ST_Distance(r.geo, ST_SetSRID(ST_MakePoint($%d, $%d), 4326))", idx, idx+1)
 		args = append(args, p.Lon, p.Lat)
 		idx += 2
+
+		// Enforce a 100km proximity limit specifically for "Best Deals" to ensure relevance.
+		if p.Sort == "" || p.Sort == "discount" {
+			conditions = append(conditions, fmt.Sprintf("ST_DWithin(r.geo, ST_SetSRID(ST_MakePoint($%d, $%d), 4326), 100000)", idx-2, idx-1))
+		}
 	}
 
 	if p.City != "" {
@@ -279,12 +284,12 @@ func SearchHandler(db *sql.DB) http.HandlerFunc {
 			return
 		}
 
-		orderBy := "ORDER BY effective_discount DESC"
+		orderBy := "ORDER BY effective_discount DESC, id ASC"
 		switch p.Sort {
 		case "rating_desc":
-			orderBy = "ORDER BY rating DESC"
+			orderBy = "ORDER BY rating DESC, id ASC"
 		case "cost_asc":
-			orderBy = "ORDER BY cost_for_two ASC"
+			orderBy = "ORDER BY cost_for_two ASC, id ASC"
 		default:
 		}
 
