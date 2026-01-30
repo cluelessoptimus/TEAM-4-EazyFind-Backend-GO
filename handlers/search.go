@@ -108,15 +108,23 @@ func BuildSearchQueries(p SearchParams) (string, string, []interface{}) {
 
 	distanceExpr := "0.0"
 
+	// Calculate distance expression whenever coordinates are provided, regardless of city filter.
+	// This ensures that even when filtering by city, the frontend receives proximity data.
+	if p.HasLocation {
+		distanceExpr = fmt.Sprintf("ST_Distance(r.geo, ST_SetSRID(ST_MakePoint($%d, $%d), 4326))", idx, idx+1)
+		args = append(args, p.Lon, p.Lat)
+		idx += 2
+	}
+
 	if p.City != "" {
 		conditions = append(conditions, fmt.Sprintf("r.city ILIKE $%d", idx))
 		args = append(args, p.City)
 		idx++
 	} else if p.HasLocation {
-		distanceExpr = fmt.Sprintf("ST_Distance(r.geo, ST_SetSRID(ST_MakePoint($%d, $%d), 4326))", idx, idx+1)
-		conditions = append(conditions, fmt.Sprintf("ST_DWithin(r.geo, ST_SetSRID(ST_MakePoint($%d, $%d), 4326), $%d)", idx, idx+1, idx+2))
-		args = append(args, p.Lon, p.Lat, p.Radius)
-		idx += 3
+		// If NO city is provided but location is active, use ST_DWithin for discovery.
+		conditions = append(conditions, fmt.Sprintf("ST_DWithin(r.geo, ST_SetSRID(ST_MakePoint($%d, $%d), 4326), $%d)", idx-2, idx-1, idx))
+		args = append(args, p.Radius)
+		idx++
 	}
 
 	if p.Name != "" {
